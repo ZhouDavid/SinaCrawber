@@ -1,19 +1,18 @@
 # -*- coding:utf-8 -*-
+import os
+import math
 import time
 import datetime
+import random
 import re
 import json
 import sys
 
 import requests
-#import certifi
-#from bs4 import BeautifulSoup
-#import pymongo
 import codecs
-#import image_detect
 import constant
 
-MAX_PAGE=100
+MAX_PAGE=50
 begin_time = '2013-2-1 00:00'
 end_time = '2016-7-1 23:59'
 
@@ -36,7 +35,7 @@ def showjson(s, count):
 
 class Spider:
     def updateCookie(self):
-        cookie ='SINAGLOBAL=1235433884430.6768.1430467351374; _s_tentry=www.24en.com; Apache=8935136484119.293.1467168964042; ULV=1467168964055:28:4:1:8935136484119.293.1467168964042:1466730010352; YF-Ugrow-G0=ea90f703b7694b74b62d38420b5273df; YF-V5-G0=d22a701aae075ca04c11f0ef68835839; YF-Page-G0=d52660735d1ea4ed313e0beb68c05fc5; WBtopGlobal_register_version=c5a1a241471e96ea; WBStore=8ca40a3ef06ad7b2|undefined; wb_bub_hot_2243006675=1; UOR=,,login.sina.com.cn; SCF=AiC3Rgm6u3z9xSgKzd--JNljSASLf43Sagws6VbO68B_Njg4lQKwyKuw0wHBiCyAKRtYXZ4G0oBsf4YaLF6qW5s.; SUB=_2A256hMcqDeTxGeNG4lYV8inPwjiIHXVZ87_irDV8PUNbmtBeLVbFkW-KQ7Wl7zTYxeYPLyMs3-kSddebmA..; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFSmMZEdn1kmBrdvnWgNJZF5JpX5K2hUgL.Fo-R1KBXeoM01KB2dJLoI7y.IgUDUsvfU5tt; SUHB=0nl-BuZEgkeyp-; ALF=1499589370; SSOLoginState=1468053370; un=soadigitout@itispxm.com; wvr=6; wb_bub_hot_5894427394=1'
+        cookie ='SINAGLOBAL=3508472725501.8877.1468079275906; _ga=GA1.2.865931425.1468135266; __gads=ID=b7e4913bae157861:T=1468135260:S=ALNI_MbTsEAM-_WqazyZms5qGARJFWeaEA; wb_bub_hot_5898713520=1; YF-Ugrow-G0=ad06784f6deda07eea88e095402e4243; YF-V5-G0=55f24dd64fe9a2e1eff80675fb41718d; YF-Page-G0=734c07cbfd1a4edf254d8b9173a162eb; _s_tentry=login.sina.com.cn; Apache=6584713805471.305.1468166773532; ULV=1468166773575:3:3:2:6584713805471.305.1468166773532:1468135322333; wb_bub_hot_5894427394=1; WB_register_version=6a140e8e73e40c90; appkey=; wb_bub_hot_5971914513=1; wb_bub_hot_5972341543=1; wb_bub_hot_5972341676=1; WBStore=8ca40a3ef06ad7b2|undefined; UOR=www.google.co.jp,open.weibo.com,login.sina.com.cn; SCF=AoN3i4Zz5zTNqaysPyrmLUGyEL-UDF0iX3Ph5tWj9VXU-a1cCHCwvY4PT9VQG_xvJshqy8p9cZNZMSdxNNIXS98.; SUB=_2A256htfJDeTxGeNH7FAS9C_KzDqIHXVZ8k4BrDV8PUNbmtBeLXDEkW9Fmdx58M11CbRmteD6YRTbT-v2Kg..; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9W5Ma6K5_dCbfCI_yYCBuHs15JpX5K2hUgL.Fo-4S0z0Sh2cS0q2dJLoIpMLxKBLB.-LBK5LxK-LB--LBKi2x.xKBBtt; SUHB=0BLYCWjTibpGiE; ALF=1499716376; SSOLoginState=1468180377; un=13717132653; wvr=6; WBtopGlobal_register_version=6a140e8e73e40c90'
         self.cookdic = dict(Cookie=cookie)
 
     def __init__(self):
@@ -59,6 +58,7 @@ class Spider:
         """
         try:
             req = requests.get(toUrl, verify = False,cookies=self.cookdic, timeout=50)
+            time.sleep(1)
         except:
             return None
         if req.status_code != requests.codes.ok:
@@ -71,26 +71,36 @@ class Spider:
         inputUrl = 'http://m.weibo.cn/page/json?containerid=100505' + inputid + '_-_WEIBO_SECOND_PROFILE_WEIBO&page='
         tmpContent = self.get_content(inputUrl + '1')
         s = json.loads(tmpContent.text)
-        # f = file('weibo.txt','w')
-        # f.write(str(s))
-        # f.close()
-        # print a.keys()
-        # showjson(s, 0)
         if 'maxPage' in s['cards'][0]:
             maxPage = s['cards'][0]['maxPage']
         else:
             maxPage = 1
+        if maxPage<MAX_PAGE:
+            pages=maxPage
+        else:
+            pages=MAX_PAGE
+        print 'maxPage='+str(maxPage)
         my_weibo_list = []
-        for i in xrange(1, MAX_PAGE + 1):
+        too_old = False
+        delta = math.floor(maxPage/60)
+        if delta<1:
+            delta = 1
+        print 'delta='+str(delta)
+        i = 1
+        while (i <= maxPage):
+            if too_old==True:
+                break
             print ("Page %d" % i)
             tmp = self.get_content(inputUrl + str(i))
             if tmp is None:
+                i=i+delta
                 continue
             if tmp == 1:
                 return my_weibo_list
             s = json.loads(tmp.text)
 
             if 'card_group' not in s['cards'][0]:
+                i=i+delta
                 continue
             # print s
             # weibo_list = [k['mblog'] for k in s['cards'][0]['card_group']]
@@ -101,113 +111,46 @@ class Spider:
                     weibo_list.append(k['mblog'])
             for weibo in weibo_list:
                 my_weibo = {}
-                # showjson(weibo, 0)
-                if 'created_at' in weibo:
-                	time = weibo['created_at']
-              		if not time[0]=='2'and not time[1]=='0':
-              			time = '2016-'+weibo['created_at']
-              		ttime=datetime.datetime.strptime(time,'%Y-%m-%d %H:%M')
-              		if begin_time>ttime:
-              			break
-              		elif end_time<ttime:
-              			continue
-              		else:
-              			my_weibo['created_at'] = time
-                # text
-                # if 'text' in weibo:
-                #     my_weibo['text'] = weibo['text']
-                # # mobile phone
-                # if 'source' in weibo:
-                #     my_weibo['source'] = weibo['source']
-                # if 'url_struct' in weibo:
-                #     if weibo['url_struct'][0]['url_type'] == 36:
-                #         # showjson(weibo['url_struct'],0)
-                #         # print weibo['url_struct'][0]['short_url']
-                #         content = self.get_content(weibo['url_struct'][0]['short_url'])
-                #         if content:
-                #             short_url_data = content.text
-                #             pattern = u'location.replace\("([^"]*)"\)'
-                #             url_data = short_url_data
-                #             # 地址数据
-                #             pattern = u'poiid=([^\&]*)\&amp'
-                #             mm = re.search(pattern, url_data)
-                #             if mm:
-                #                 # print mm.group(1)
-                #                     # print mm.group(1)
-                #                 # print url_data
-                #                 my_weibo['location_name'] = weibo['url_struct'][0]['url_title']
-                #                 [lon,lat] = mm.group(1).split('_')
-                #                 my_weibo['location_lon'] = lon
-                #                 my_weibo['location_lat'] = lat
-                #                 # print my_weibo['location']
-                #                 # <src="http://place.weibo.com/index.php?_p=place_page&amp;_a=poi_map_right&amp;poiid=1013247614"
-                #                 # poiObject.lon = 116.307620521;
-                #                 # poiObject.lat = 39.9841806635;
-                #             else:
-                #                 # print 'checkin'
-                #                 # print url_data
-                #                 pattern = u'poiid=([^\']*)\''
-                #                 mmm = re.search(pattern, url_data)
-                #                 if mmm:
-                #                     # print mmm.group(1)
-                #                     placeid = mmm.group(1)
-                #                     url = "http://place.weibo.com/index.php?_p=place_page&_a=poi_map_right&poiid="+placeid
-                #                     # newcookiedic = login.getCookies([{'no':username, 'psw':password}])[0]
-                #                     content = self.get_content(url)
-                #                     if content:
-                #                         # print '*'*100
-                #                         # print content.text
-                #                         p1 = u'poiObject.lon = ([^;]*);'
-                #                         m1 = re.search(p1, content.text)
-                #                         p2 = u'poiObject.lat = ([^;]*);'
-                #                         m2 = re.search(p2, content.text)
-                #                         if m1 and m2:
-                #                             lon = m1.group(1)
-                #                             lat = m2.group(1)
-                #                             my_weibo['location_name'] = weibo['url_struct'][0]['url_title']
-                #                             my_weibo['location_lon'] = lon
-                #                             my_weibo['location_lat'] = lat
-
-                if 'reposts_count' in weibo:#转发量
-                	my_weibo['reposts_count'] = weibo['reposts_count']
-
-                if 'comments_count' in weibo:#评论数
-                	my_weibo['comments_count'] = weibo['comments_count']
-
-                if 'like_count' in weibo:#点赞量
-                	my_weibo['like_count'] = weibo['like_count']
-
-                if 'retweeted_status' in weibo:#是否原创
-                	my_weibo['origin'] = '0'
-                else:
-                	my_weibo['origin'] = '1'
-
-                if 'bmiddle_pic' in weibo or 'original_pic' in weibo or 'thumbnail_pic' in weibo:
-                	my_weibo['has_pic'] = '1'
-                else:
-                	my_weibo['has_pic'] = '0'
-
+                if 'reposts_count' in weibo:
+                    my_weibo['reposts_count'] = weibo['reposts_count']
+                if 'comments_count' in weibo:
+                    my_weibo['comments_count'] = weibo['comments_count']
+                if 'like_count' in weibo:
+                    my_weibo['like_count'] = weibo['like_count']
                 if 'bid' in weibo:
-                	my_weibo['bid'] = 'http://weibo.com/'+str(inputid)+'/'+weibo['bid']
-                thumbnail_url = 'http://ww1.sinaimg.cn/thumbnail/'
-                bmiddle_url = 'http://ww1.sinaimg.cn/bmiddle/'
-                original_url = 'http://ww1.sinaimg.cn/large/'
-                # if 'pics' in weibo:
-                #     pics_list = []
-                #     for pic in weibo['pics']:
-                #         pics_list.append({'thumbnail_pic':thumbnail_url+pic['pid'], 'bmiddle_pic':bmiddle_url+pic['pid'], 'original_pic':original_url+pic['pid']})
-                #     my_weibo['pics'] = pics_list
-                # if 'thumbnail_pic' in weibo:
-                #     my_weibo['thumbnail_pic'] = weibo['thumbnail_pic']
-                # if 'bmiddle_pic' in weibo:
-                #     my_weibo['bmiddle_pic'] = weibo['bmiddle_pic']
-                # if 'original_pic' in weibo:
-                #     my_weibo['original_pic'] = weibo['original_pic']
+                    my_weibo['bid'] = 'http://weibo.com/' + str(inputid) + '/' + weibo['bid']
+                if 'retweeted_status' in weibo:
+                    my_weibo['origin'] = '0'
+                else:
+                    my_weibo['origin'] = '1'
+                abored = False
+                if 'created_at' in weibo:
+                    time = weibo['created_at']
+                    tlen = len(time)
+                    if tlen==8:
+                        time = today+' '+time[3:]
+                    elif tlen==11:
+                        time = '2016-'+weibo['created_at']
+                    elif tlen<8:
+                        abored = True
+                    if not abored:
+                        ttime = datetime.datetime.strptime(time,'%Y-%m-%d %H:%M')
+                    else:
+                        ttime = datetime.datetime.now()
+                    if end_time<ttime:
+                        i=i+delta
+                        continue
+                    elif begin_time>ttime:
+                        too_old = True
+                        break
+                    my_weibo['created_at'] = time
+                if 'bmiddle_pic' in weibo or 'original_pic' in weibo or 'thumbnail_pic' in weibo:
+                    my_weibo['has_pic'] = '1'
+                else:
+                    my_weibo['has_pic'] = '0'
                 my_weibo_list.append(my_weibo)
-
-        # showjson(my_weibo_list, 0)
+            i=i+delta
         return my_weibo_list
-
     def get_info(self, inputid):
         res=requests.get('https://api.weibo.com/2/users/show.json',
                          params={'source': constant.WEIBO_API_KEY, 'uid': inputid},
@@ -221,17 +164,17 @@ class Spider:
                         'info_dict': self.get_info(inputid),}
 
     def username_to_uid(self, username):
-    	username = username.decode('gb2312').encode('utf-8')#将输入的中文字符转换为utf8编码
+        print username
         res=requests.get('https://api.weibo.com/2/users/show.json',
                          params={'source': constant.WEIBO_API_KEY, 'screen_name':username},
                          cookies=self.cookdic,verify=False)
         user_text= json.loads(res.text)
         if 'idstr' in user_text:
-        	user_id = user_text['idstr']
-        	return user_id
+            user_id = user_text['idstr']
+            return user_id
         else:
-        	print 'user is not found!'
-        	exit(-1)
+            print 'user is not found!'
+            exit(-1)
 
     def crawl(self, inputid):
         # 'info_dict':get_info(inputid),
@@ -254,53 +197,74 @@ class Spider:
             return True, res
 
 if __name__ == "__main__":
-	reload(sys)
-	sys.setdefaultencoding('utf8')
-	info = '请输入微博用户名:'
-	info = info.encode('gb2312')
-	print ("Welcome to use this program for crawling data from sina microblo!")
-	username = raw_input(info)
-	#file = open(filename,'r')
-	#usernames =[]
+    reload(sys)
+    sys.setdefaultencoding('utf8')
+    print ("Welcome to use this program for crawling data from sina microblo!")
+    name_list=['葡萄牙驻华大使馆',\
+    '俄罗斯驻华大使馆',\
+    '欧盟在中国',\
+    '中欧信使',\
+    '日本国驻华大使馆',\
+    '韩国驻华大使馆',\
+    '英国驻华使馆',\
+    '法国驻华使馆',\
+    '爱尔兰驻华大使馆',\
+    '荷兰驻华大使馆',\
+    '丹麦驻华大使馆',\
+    '澳大利亚驻华使领馆',\
+    '委内瑞拉驻华使馆',\
+    '瑞典驻华大使馆微博',\
+    '奥地利驻华使馆',\
+    '印度使馆文化处',\
+    '瑞士驻华大使馆',\
+    '泰国驻华大使馆',\
+    '新西兰驻华大使馆',\
+    '以色列驻华使馆',\
+    '墨西哥驻华大使馆',\
+    '波兰使馆文化处',\
+    '意大利驻华使馆',\
+    '挪威驻华大使馆',\
+    '德国驻华大使馆',\
+    '古巴驻华大使馆',\
+    '希腊使馆新闻办公室',\
+    '秘鲁驻华使馆',\
+    '巴西驻华大使馆',\
+    '埃及驻华使馆文化处',\
+    '印度尼西亚共和国驻广州总领事馆',\
+    '保加利亚共和国驻上海总领事馆',\
+    '比利时驻华使馆',\
+    '哥斯达黎加驻华大使馆',\
+    '西班牙驻华大使馆官方微博',\
+    '智利驻中国大使馆',\
+    '斯里兰卡驻广州总领事馆',\
+    '马尔代夫驻华大使馆',\
+    ]
 
-	# while 1:
-	# 	name = file.readline()
-	# 	if not name:
-	# 		break
-	# 	usernames.append(name)
-	# 	pass
+    my_spider = Spider()
+    user_ids = []
+    # for name in name_list:
+    #     user_id = my_spider.username_to_uid(name)
+    #     user_ids.append(user_id)
+    user_ids = ['3802185661', '2503806417', '1974271741', '2912176333', '1938487875', '2394895404', '1663026093',\
+                '1987630007', '3854853421', '2511711495', '2001109753', '1918101143', '3247450215' \
+                '3260734291', '2861043474','2261322181', '2603537861', '3223655791', '5041530878', '2297867557', '2464455037', '2082506443',\
+                '3045655775', '5394927186', '2209621235', \
+                '3213889125', '1898996141', '3216802580', '2490644882', '2466916861', '3982986009', '2868342892',\
+                '1927332783', '2442073863', '2839805303', '5237350253', '2833027310', '2137856685']
+    i = 0
+    for id in user_ids:
+        print i
+        latest,my_weibo_list = my_spider.crawl(id)
+        weibo_list = my_weibo_list['weibo_list']
+        filename = name_list[i].decode('utf-8').encode('gb2312')
+        f = codecs.open(filename,'w','utf-8')
+        j = 1
+        for weibo in weibo_list:
+            record = str(j) + ',' + weibo['created_at'] + ',' + weibo['bid'] + ',' + \
+            str(weibo['reposts_count']) + ',' + str(weibo['comments_count']) + ',' + str(weibo['like_count']) + ',' + \
+            weibo['origin'] + ',' + weibo['has_pic'] + '\n'
+            f.write(record)
+            j=j+1
+        i=i+1
+        f.close()
 
-	my_spider = Spider()
-	user_id = my_spider.username_to_uid(username)
-	latest, my_weibo_list = my_spider.crawl(user_id)
-	weibo_list = my_weibo_list['weibo_list']
-	f = codecs.open(username,'w','utf-8')
-	i=1
-	for weibo in weibo_list:
-		record = str(i)+','+weibo['created_at']+','+weibo['bid']+','+str(weibo['reposts_count'])+','+str(weibo['comments_count'])+','+str(weibo['like_count'])+','+weibo['origin']+','+weibo['has_pic']+'\n'  
-		f.write(record)
-		i=i+1
-	#print my_weibo_list['weibo_list'][2]['has_pic']
-	f.close()
-	# my_spider.clear_cache()
-	# for username in usernames:
-	# 	print ("Getting Weibo...")
-	# 	user_id = my_spider.username_to_uid(username)
-	# 	latest, my_weibo_list = my_spider.crawl('1631851494')
-	# 	weibo_list = my_weibo_list['weibo_list']
-	# 	#写入文件
-	# 	i=1
-	# 	f = codecs.open('美国驻华大使馆','w','utf-8')
-	# 	for weibo in weibo_list:
-	# 		record = str(i)+','+weibo['created_at']+','+weibo['bid']+','+str(weibo['reposts_count'])+','+str(weibo['comments_count'])+','+str(weibo['like_count'])+','+str(weibo['origin'])+','+str(weibo['has_pic'])+'\n'  
-	# 		f.write(record)
-	# 		i=i+1
-	# 		#print my_weibo_list['weibo_list'][2]['has_pic']
-	# 	f.close()
-	
-	# thanks = '不用谢我，我是活雷锋~'
-	# thanks = thanks.encode('gb2312')
-	# print (thanks)
-    # def get_result(self, inputid):
-    #     return {'uid': inputid, 'updated_at': time.time(), 'weibo_list': self.get_weibo(inputid),
-    #                     'info_dict': self.get_info(inputid),}
